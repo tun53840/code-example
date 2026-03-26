@@ -163,12 +163,15 @@ def image_search(request: HttpRequest) -> HttpResponse:
     
     sortedresults = sorted(results, key=results.get, reverse=True)
     
-    cards_by_id = {
-        card.id: card
-        for card in KnowledgeCard.objects.filter(id__in=sortedresults)
-    }
     
-    ordered_cards = [cards_by_id[cid] for cid in sortedresults if cid in cards_by_id][:IMAGE_TOP_K]
+    card_queryset = KnowledgeCard.objects.filter(id__in=sortedresults)
+    ordered_cards = []
+    for cid in sortedresults:
+        for card in card_queryset:
+            if card.id == cid:
+                ordered_cards.append(card)
+                break
+
         
     match_scores = {card.id: results[card.id]*100 for card in ordered_cards}
     match_ranks = {card.id: idx + 1 for idx, card in enumerate(ordered_cards)}

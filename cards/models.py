@@ -46,6 +46,7 @@ class CardImage(models.Model):
     original_filename = models.CharField(max_length=255)
     average_hash = models.CharField(max_length=64, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    signature = models.TextField(default="", blank=True)
 
     class Meta:
         ordering = ["created_at"]

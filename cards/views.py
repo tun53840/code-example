@@ -7,6 +7,7 @@ from django.core.paginator import Paginator
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
+
 from .forms import (
     CardImageUploadForm,
     ImageSearchForm,
@@ -40,22 +41,27 @@ def _save_images(card: KnowledgeCard, files) -> None:
     # TODO(student): implement image save/replace logic for one-primary-image policy.
     # HINT: take files[0], compute histogram signature, then upsert CardImage for this card.
     # Default fallback keeps app runnable but does not compute signatures.
+    
     if not files:
         return
     uploaded = files[0]
+    histsignature = compute_color_histogram_signature(uploaded)
     existing = card.images.first()
     if existing:
         existing.image.delete(save=False)
         existing.image = uploaded
         existing.original_filename = uploaded.name
         existing.average_hash = ""
-        existing.save(update_fields=["image", "original_filename", "average_hash"])
+        existing.signature = histsignature
+        existing.save(update_fields=["image", "original_filename", "average_hash","signature"])
+        
     else:
         CardImage.objects.create(
             card=card,
             image=uploaded,
             original_filename=uploaded.name,
             average_hash="",
+            signature=histsignature
         )
 
 
@@ -148,8 +154,23 @@ def image_search(request: HttpRequest) -> HttpResponse:
     # 2) call compare_image_similarity(query_signature, stored_signature)
     # 3) keep best score per card, sort desc, return top IMAGE_TOP_K
     # Default fallback: first 3 cards with images, all scores 0.
-    ordered_cards = list(KnowledgeCard.objects.prefetch_related("images").filter(images__isnull=False).distinct()[:IMAGE_TOP_K])
-    match_scores = {card.id: 0.0 for card in ordered_cards}
+    card_images = list(CardImage.objects.prefetch_related("card").filter(image__isnull=False).exclude(signature="").distinct())
+    results = {}
+    for card_image in card_images:
+        score = compare_image_similarity(query_signature, card_image.signature)
+        card_id = card_image.card.id
+        results[card_id]=score
+    
+    sortedresults = sorted(results, key=results.get, reverse=True)
+    
+    cards_by_id = {
+        card.id: card
+        for card in KnowledgeCard.objects.filter(id__in=sortedresults)
+    }
+    
+    ordered_cards = [cards_by_id[cid] for cid in sortedresults if cid in cards_by_id][:IMAGE_TOP_K]
+        
+    match_scores = {card.id: results[card.id]*100 for card in ordered_cards}
     match_ranks = {card.id: idx + 1 for idx, card in enumerate(ordered_cards)}
 
     paginator = Paginator(ordered_cards, 9)

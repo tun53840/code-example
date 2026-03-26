@@ -1,9 +1,15 @@
 from __future__ import annotations
+from math import sqrt
 
 
 def compare_image_similarity(query_signature: str, stored_signature: str) -> float:
-    """
-    TODO(student): compare two histogram signatures and return similarity in [0.0, 1.0].
-    HINT: you can parse comma-separated floats and use cosine similarity.
-    """
-    return 0.0
+    a = [float(x) for x in query_signature.split(",")]
+    b = [float(x) for x in stored_signature.split(",")]
+    dot = sum(x * y for x, y in zip(a, b))
+    norm_a = sqrt(sum(x * x for x in a))
+    norm_b = sqrt(sum(y * y for y in b))
+    
+    if norm_a == 0.0 or norm_b == 0.0:
+        return 0.0
+    
+    return dot/(norm_a*norm_b)

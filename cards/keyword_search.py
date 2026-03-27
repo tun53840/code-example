@@ -6,7 +6,7 @@ def apply_keyword_search(queryset, keyword: str):
     terms = keyword.split()
     q = Q()
     for term in terms:
-        q &= (
+        q |= (
             Q(title__icontains=term)      |
             Q(summary__icontains=term)     |
             Q(description__icontains=term) |

@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+from django.db.models import Q
 from dataclasses import dataclass
 
 from django.contrib import messages
@@ -38,9 +38,6 @@ def _apply_sort(queryset, sort: str):
 
 
 def _save_images(card: KnowledgeCard, files) -> None:
-    # TODO(student): implement image save/replace logic for one-primary-image policy.
-    # HINT: take files[0], compute histogram signature, then upsert CardImage for this card.
-    # Default fallback keeps app runnable but does not compute signatures.
     
     if not files:
         return
@@ -147,13 +144,6 @@ def image_search(request: HttpRequest) -> HttpResponse:
 
     query_image = image_form.cleaned_data["query_image"]
     query_signature = compute_color_histogram_signature(query_image)
-
-    # TODO(student): implement image similarity ranking.
-    # HINT:
-    # 1) iterate CardImage rows with non-empty signatures
-    # 2) call compare_image_similarity(query_signature, stored_signature)
-    # 3) keep best score per card, sort desc, return top IMAGE_TOP_K
-    # Default fallback: first 3 cards with images, all scores 0.
     card_images = list(CardImage.objects.prefetch_related("card").filter(image__isnull=False).exclude(signature="").distinct())
     results = {}
     for card_image in card_images:
